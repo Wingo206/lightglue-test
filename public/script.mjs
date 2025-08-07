@@ -95,19 +95,19 @@ function createTestElements(key) {
   }
 
   const body = document.body;
-  
+
   // Create result paragraph
   const resultP = document.createElement("p");
   resultP.id = "result-" + key;
   resultP.textContent = "waiting for " + key;
   body.appendChild(resultP);
-  
+
   // Create error paragraph
   const errorP = document.createElement("p");
   errorP.id = "error-" + key;
   errorP.textContent = "no error";
   body.appendChild(errorP);
-  
+
   // Add line break
   const br = document.createElement("br");
   body.appendChild(br);
@@ -116,9 +116,9 @@ function createTestElements(key) {
 async function test(sessionParams, key) {
   // Create HTML elements for this test if they don't exist
   createTestElements(key);
-  
-  const tensor = await getExampleTensor();
+
   try {
+    const tensor = await getExampleTensor();
     const startTime = performance.now();
     const session = await onnxruntimeWeb.InferenceSession.create(
       MODEL_PATH,
@@ -151,7 +151,10 @@ async function main() {
   // onnxruntimeWeb.env.logLevel = "verbose";
   // onnxruntimeWeb.env.debug = true;
 
-  await test({ executionProviders: ["webgpu"] }, "gpu");
+  await test(
+    { executionProviders: [{ name: "webgpu", powerPreference: "low-power" }] },
+    "gpu"
+  );
   await test(
     {
       executionProviders: [
@@ -200,7 +203,7 @@ async function main() {
     },
     "webnn-npu"
   );
-  await test({ executionProviders: ["wasm"] }, "cpu");
+  test({ executionProviders: ["wasm"] }, "cpu");
 }
 
 main();
