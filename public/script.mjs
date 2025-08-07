@@ -126,6 +126,8 @@ async function test(sessionParams, key) {
     try {
       const tensor = await getExampleTensor();
       const startTime = performance.now();
+      document.getElementById("result-" + key).innerText =
+        "loading " + key + "...";
       const session = await onnxruntimeWeb.InferenceSession.create(
         MODEL_PATH,
         sessionParams
