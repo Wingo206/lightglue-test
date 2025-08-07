@@ -1,9 +1,23 @@
 // import onnxruntimeWeb from "./ort.webgpu.min.mjs"
 import onnxruntimeWeb from "./ort.webgpu.min.mjs";
 
-// const MODEL_PATH = "./lg_256_128p.onnx";
-const MODEL_PATH = "./superpoint_lightglue_pipeline.onnx";
-const INPUT_SIZE = 1024;
+// Model configurations
+const MODEL_CONFIGS = {
+  "superpoint_lightglue": {
+    name: "SuperPoint + LightGlue Pipeline",
+    path: "./superpoint_lightglue_pipeline.onnx",
+    inputSize: 1024
+  },
+  "lg_256": {
+    name: "LightGlue 256x128p",
+    path: "./lg_256_128p.onnx", 
+    inputSize: 256
+  }
+};
+
+// Current model settings (mutable)
+let MODEL_PATH = "./superpoint_lightglue_pipeline.onnx";
+let INPUT_SIZE = 1024;
 
 function imageToTensor(img) {
   const targetSize = INPUT_SIZE;
@@ -88,6 +102,21 @@ function loadImageFromDataUrl(dataUrl) {
   });
 }
 
+function updateModelSettings(modelKey) {
+  const config = MODEL_CONFIGS[modelKey];
+  if (config) {
+    MODEL_PATH = config.path;
+    INPUT_SIZE = config.inputSize;
+    console.log(`Switched to model: ${config.name}, Input size: ${INPUT_SIZE}`);
+    
+    // Update display to show current model
+    const modelDisplay = document.getElementById("current-model-display");
+    if (modelDisplay) {
+      modelDisplay.textContent = `Current: ${config.name} (${INPUT_SIZE}x${INPUT_SIZE})`;
+    }
+  }
+}
+
 function createTestElements(key, displayName) {
   // Check if elements already exist
   if (document.getElementById("result-" + key)) {
@@ -123,12 +152,13 @@ function createTestElements(key, displayName) {
 
 async function test(sessionParams, key) {
   return new Promise(async (resolve) => {
+    let session = null;
     try {
       const tensor = await getExampleTensor();
       const startTime = performance.now();
       document.getElementById("result-" + key).innerText =
         "loading " + key + "...";
-      const session = await onnxruntimeWeb.InferenceSession.create(
+      session = await onnxruntimeWeb.InferenceSession.create(
         MODEL_PATH,
         sessionParams
       );
@@ -153,6 +183,11 @@ async function test(sessionParams, key) {
     } catch (error) {
       document.getElementById("error-" + key).innerText = error.toString();
       resolve();
+    } finally {
+        if (session && session.handler && session.handler.dispose) {
+            console.log("disposing session");
+            session.handler.dispose();
+        }
     }
   });
 }
@@ -160,7 +195,7 @@ async function test(sessionParams, key) {
 function getTestConfigurations() {
   return [
     {
-      key: "gpu",
+      key: "webgpu",
       displayName: "WebGPU",
       sessionParams: { executionProviders: [{ name: "webgpu", powerPreference: "low-power" }] }
     },
@@ -215,6 +250,51 @@ async function main() {
   // onnxruntimeWeb.env.logLevel = "verbose";
   // onnxruntimeWeb.env.debug = true;
 
+  // Create model selection dropdown
+  const modelSelectorLabel = document.createElement("label");
+  modelSelectorLabel.textContent = "Select Model: ";
+  modelSelectorLabel.style.fontWeight = "bold";
+  modelSelectorLabel.style.marginRight = "10px";
+  document.body.appendChild(modelSelectorLabel);
+
+  const modelSelector = document.createElement("select");
+  modelSelector.id = "model-selector";
+  modelSelector.style.marginRight = "20px";
+  modelSelector.style.marginBottom = "10px";
+  modelSelector.style.padding = "5px";
+
+  // Add options to dropdown
+  Object.keys(MODEL_CONFIGS).forEach(key => {
+    const option = document.createElement("option");
+    option.value = key;
+    option.textContent = MODEL_CONFIGS[key].name;
+    if (key === "superpoint_lightglue") { // Set default selection
+      option.selected = true;
+    }
+    modelSelector.appendChild(option);
+  });
+  
+  document.body.appendChild(modelSelector);
+
+  // Create current model display
+  const modelDisplay = document.createElement("span");
+  modelDisplay.id = "current-model-display";
+  modelDisplay.style.marginLeft = "10px";
+  modelDisplay.style.fontStyle = "italic";
+  modelDisplay.style.color = "#666";
+  document.body.appendChild(modelDisplay);
+  
+  // Initialize display
+  updateModelSettings("superpoint_lightglue");
+
+  // Add line break after model selector
+  const brAfterModel = document.createElement("br");
+  document.body.appendChild(brAfterModel);
+  
+  // Add another line break for spacing
+  const brSpacing = document.createElement("br");
+  document.body.appendChild(brSpacing);
+
   const testConfigs = getTestConfigurations();
   
   // Create "Run All Tests" button
@@ -245,6 +325,11 @@ async function main() {
     });
   });
   
+  // Add change event listener to model selector dropdown
+  modelSelector.addEventListener("change", (event) => {
+    updateModelSettings(event.target.value);
+  });
+
   // Add click event listener to "Run All Tests" button
   runAllButton.addEventListener("click", async () => {
     runAllButton.disabled = true;
