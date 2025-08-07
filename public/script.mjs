@@ -88,7 +88,7 @@ function loadImageFromDataUrl(dataUrl) {
   });
 }
 
-function createTestElements(key) {
+function createTestElements(key, displayName) {
   // Check if elements already exist
   if (document.getElementById("result-" + key)) {
     return; // Elements already exist
@@ -96,10 +96,18 @@ function createTestElements(key) {
 
   const body = document.body;
 
+  // Create button for this test
+  const button = document.createElement("button");
+  button.id = "button-" + key;
+  button.textContent = "Run " + displayName;
+  button.style.marginRight = "10px";
+  button.style.marginBottom = "10px";
+  body.appendChild(button);
+
   // Create result paragraph
   const resultP = document.createElement("p");
   resultP.id = "result-" + key;
-  resultP.textContent = "waiting for " + key;
+  resultP.textContent = "Click button to run " + displayName;
   body.appendChild(resultP);
 
   // Create error paragraph
@@ -114,10 +122,7 @@ function createTestElements(key) {
 }
 
 async function test(sessionParams, key) {
-  // Create HTML elements for this test if they don't exist
-  createTestElements(key);
-
-  return new Promise(async (resolve, reject) => {
+  return new Promise(async (resolve) => {
     try {
       const tensor = await getExampleTensor();
       const startTime = performance.now();
@@ -150,63 +155,119 @@ async function test(sessionParams, key) {
   });
 }
 
+function getTestConfigurations() {
+  return [
+    {
+      key: "gpu",
+      displayName: "WebGPU",
+      sessionParams: { executionProviders: [{ name: "webgpu", powerPreference: "low-power" }] }
+    },
+    {
+      key: "webnn-gpu",
+      displayName: "WebNN GPU",
+      sessionParams: {
+        executionProviders: [
+          {
+            name: "webnn",
+            deviceType: "gpu",
+            powerPreference: "default",
+          },
+        ],
+      }
+    },
+    {
+      key: "webnn-cpu",
+      displayName: "WebNN CPU",
+      sessionParams: {
+        executionProviders: [
+          {
+            name: "webnn",
+            deviceType: "cpu",
+            powerPreference: "default",
+          },
+        ],
+      }
+    },
+    {
+      key: "webnn-npu",
+      displayName: "WebNN NPU",
+      sessionParams: {
+        executionProviders: [
+          {
+            name: "webnn",
+            deviceType: "npu",
+            powerPreference: "default",
+          },
+        ],
+      }
+    },
+    {
+      key: "cpu",
+      displayName: "WASM CPU",
+      sessionParams: { executionProviders: ["wasm"] }
+    }
+  ];
+}
+
 async function main() {
   // onnxruntimeWeb.env.logLevel = "verbose";
   // onnxruntimeWeb.env.debug = true;
 
-  await test(
-    { executionProviders: [{ name: "webgpu", powerPreference: "low-power" }] },
-    "gpu"
-  );
-  await test(
-    {
-      executionProviders: [
-        {
-          name: "webnn",
-          deviceType: "gpu",
-          powerPreference: "default",
-        },
-      ],
-    },
-    "webnn-gpu"
-  );
-  await test(
-    {
-      executionProviders: [
-        {
-          name: "webnn",
-          deviceType: "gpu",
-          powerPreference: "default",
-        },
-      ],
-    },
-    "webnn-gpu"
-  );
-  await test(
-    {
-      executionProviders: [
-        {
-          name: "webnn",
-          deviceType: "cpu",
-          powerPreference: "default",
-        },
-      ],
-    },
-    "webnn-cpu"
-  );
-  await test(
-    {
-      executionProviders: [
-        {
-          name: "webnn",
-          deviceType: "npu",
-          powerPreference: "default",
-        },
-      ],
-    },
-    "webnn-npu"
-  );
-  await test({ executionProviders: ["wasm"] }, "cpu");
+  const testConfigs = getTestConfigurations();
+  
+  // Create "Run All Tests" button
+  const runAllButton = document.createElement("button");
+  runAllButton.textContent = "Run All Tests";
+  runAllButton.style.marginRight = "20px";
+  runAllButton.style.marginBottom = "20px";
+  runAllButton.style.fontWeight = "bold";
+  runAllButton.style.padding = "10px 20px";
+  document.body.appendChild(runAllButton);
+  
+  // Add line break after "Run All" button
+  const brAfterRunAll = document.createElement("br");
+  document.body.appendChild(brAfterRunAll);
+  
+  // Create UI elements for all tests
+  testConfigs.forEach(config => {
+    createTestElements(config.key, config.displayName);
+    
+    // Add click event listener to the button
+    const button = document.getElementById("button-" + config.key);
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      button.textContent = "Running...";
+      await test(config.sessionParams, config.key);
+      button.disabled = false;
+      button.textContent = "Run " + config.displayName;
+    });
+  });
+  
+  // Add click event listener to "Run All Tests" button
+  runAllButton.addEventListener("click", async () => {
+    runAllButton.disabled = true;
+    runAllButton.textContent = "Running All Tests...";
+    
+    // Disable all individual buttons
+    testConfigs.forEach(config => {
+      const button = document.getElementById("button-" + config.key);
+      button.disabled = true;
+    });
+    
+    // Run all tests sequentially
+    for (const config of testConfigs) {
+      await test(config.sessionParams, config.key);
+    }
+    
+    // Re-enable all buttons
+    testConfigs.forEach(config => {
+      const button = document.getElementById("button-" + config.key);
+      button.disabled = false;
+    });
+    
+    runAllButton.disabled = false;
+    runAllButton.textContent = "Run All Tests";
+  });
 }
 
 main();
