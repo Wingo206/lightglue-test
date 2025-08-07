@@ -1,6 +1,6 @@
 "use client";
 
-import { env, InferenceSession } from "onnxruntime-web/webgpu";
+import { env, InferenceSession } from "onnxruntime-web/all";
 // import { env, InferenceSession } from "onnxruntime-web";
 import { useState } from "react";
 import { getExampleTensor } from "./getImage";
@@ -17,7 +17,11 @@ export default function Home() {
     
     try {
       const session = await InferenceSession.create("/lg_256_128p.onnx", {
-        executionProviders: enableWebGPU ? ["webgpu"] : ["wasm"],
+        executionProviders: enableWebGPU ? [{
+          name: "webnn",
+          deviceType: "gpu",
+          powerPreference: "default"
+        }] : ["wasm"],
       });
       setSession(session);
       console.log("Session created successfully with", enableWebGPU ? "WebGPU" : "WASM");

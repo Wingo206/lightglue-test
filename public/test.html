@@ -1,7 +1,8 @@
 <html>
     <body>
         <script type="module">
-            import onnxruntimeWeb from "./ort.webgpu.bundle.min.mjs"
+            // import onnxruntimeWeb from "./ort.webgpu.min.mjs"
+            import onnxruntimeWeb from "./ort.webgpu.min.mjs"
 
             function imageToTensor(img) {
                 const targetSize = 256;
@@ -83,24 +84,49 @@
 
                 const tensor = await getExampleTensor();
 
-                const session = await onnxruntimeWeb.InferenceSession.create("./lg_256_128p.onnx", {
-                    executionProviders: ["wasm"]
-                });
-
-                const result = await session.run({ images: tensor });
-
-                console.log(result, "Matches: ", result.matches.size / 3);
-
+                try {
                 const session2 = await onnxruntimeWeb.InferenceSession.create("./lg_256_128p.onnx", {
+                    // executionProviders: [{
+                    //     name: "webnn",
+                    //     deviceType: "gpu",
+                    //     powerPreference: "default"
+                    // }]
                     executionProviders: ["webgpu"]
                 });
+                document.getElementById("result-gpu").innerText = "running gpu";
+                const result4 = await session2.run({ images: tensor });
+                console.log(result4, "Matches: ", result4.matches.size / 3);
+                document.getElementById("result-gpu").innerText = result4.matches.size / 3;
+            } catch (error) {
+                document.getElementById("error-gpu").innerText = error.toString();
+                console.error(error);
+            }
 
-                const result2 = await session2.run({ images: tensor });
+                document.getElementById("result-cpu").innerText = "running cpu";
+                try {
+                    const session = await onnxruntimeWeb.InferenceSession.create("./lg_256_128p.onnx", {
+                        executionProviders: ["wasm"]
+                    });
+                    const result = await session.run({ images: tensor });
+                    console.log(result, "Matches: ", result.matches.size / 3);
+                document.getElementById("result-cpu").innerText = result.matches.size / 3;
+                } catch (error) {
+                    document.getElementById("error-cpu").innerText = error.toString();
+                    console.error(error);
+                }
 
-                console.log(result2, "Matches: ", result2.matches.size / 3);
+
+
+
             }
 
             main();
         </script>
+
+
+        <p id="result-cpu">waiting for cpu</p>
+        <p id="result-gpu">waiting for gpu</p>
+        <p id="error-cpu">no error</p>
+        <p id="error-gpu">no error</p>
     </body>
 </html>
