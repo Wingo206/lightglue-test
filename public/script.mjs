@@ -145,7 +145,7 @@ async function test(sessionParams, key) {
       resolve();
     } catch (error) {
       document.getElementById("error-" + key).innerText = error.toString();
-      reject(error);
+      resolve();
     }
   });
 }
