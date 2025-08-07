@@ -117,34 +117,37 @@ async function test(sessionParams, key) {
   // Create HTML elements for this test if they don't exist
   createTestElements(key);
 
-  try {
-    const tensor = await getExampleTensor();
-    const startTime = performance.now();
-    const session = await onnxruntimeWeb.InferenceSession.create(
-      MODEL_PATH,
-      sessionParams
-    );
-    const runStartTime = performance.now();
-    const loadTime = (runStartTime - startTime).toFixed(2);
-    document.getElementById("result-" + key).innerText =
-      "running " + key + ", loaded in " + loadTime + "ms";
+  return new Promise(async (resolve, reject) => {
+    try {
+      const tensor = await getExampleTensor();
+      const startTime = performance.now();
+      const session = await onnxruntimeWeb.InferenceSession.create(
+        MODEL_PATH,
+        sessionParams
+      );
+      const runStartTime = performance.now();
+      const loadTime = (runStartTime - startTime).toFixed(2);
+      document.getElementById("result-" + key).innerText =
+        "running " + key + ", loaded in " + loadTime + "ms";
 
-    const result = await session.run({ images: tensor });
-    const runEndTime = performance.now();
+      const result = await session.run({ images: tensor });
+      const runEndTime = performance.now();
 
-    document.getElementById("result-" + key).innerText =
-      key +
-      ": " +
-      result.matches.size / 3 +
-      " took " +
-      (runEndTime - runStartTime).toFixed(2) +
-      "ms, loaded in " +
-      loadTime +
-      "ms";
-  } catch (error) {
-    document.getElementById("error-" + key).innerText = error.toString();
-    console.error(error);
-  }
+      document.getElementById("result-" + key).innerText =
+        key +
+        ": " +
+        result.matches.size / 3 +
+        " took " +
+        (runEndTime - runStartTime).toFixed(2) +
+        "ms, loaded in " +
+        loadTime +
+        "ms";
+      resolve();
+    } catch (error) {
+      document.getElementById("error-" + key).innerText = error.toString();
+      reject(error);
+    }
+  });
 }
 
 async function main() {
@@ -203,7 +206,7 @@ async function main() {
     },
     "webnn-npu"
   );
-  test({ executionProviders: ["wasm"] }, "cpu");
+  await test({ executionProviders: ["wasm"] }, "cpu");
 }
 
 main();
