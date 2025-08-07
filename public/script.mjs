@@ -302,7 +302,7 @@ async function main() {
   threadInputContainer.style.marginBottom = "10px";
   
   const threadInputLabel = document.createElement("label");
-  threadInputLabel.textContent = "WASM Threads: ";
+  threadInputLabel.textContent = "WASM Threads: (refresh page before changing):";
   threadInputLabel.style.fontWeight = "bold";
   threadInputLabel.style.marginRight = "10px";
   threadInputContainer.appendChild(threadInputLabel);
