@@ -125,7 +125,7 @@ async function test(sessionParams, key) {
       sessionParams
     );
     const runStartTime = performance.now();
-    const loadTime = (startTime - runStartTime).toFixed(2);
+    const loadTime = (runStartTime - startTime).toFixed(2);
     document.getElementById("result-" + key).innerText =
       "running " + key + ", loaded in " + loadTime + "ms";
 
@@ -139,7 +139,7 @@ async function test(sessionParams, key) {
       " took " +
       (runEndTime - runStartTime).toFixed(2) +
       "ms, loaded in " +
-      (runEndTime - startTime).toFixed(2) +
+      loadTime +
       "ms";
   } catch (error) {
     document.getElementById("error-" + key).innerText = error.toString();
