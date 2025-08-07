@@ -253,6 +253,7 @@ async function main() {
   // Thread count management
   let currentThreadCount = 8;
   onnxruntimeWeb.env.wasm.numThreads = currentThreadCount;
+  onnxruntimeWeb.env.wasm.proxy = true;
 
   // Create model selection dropdown
   const modelSelectorLabel = document.createElement("label");
