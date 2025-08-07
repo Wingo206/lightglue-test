@@ -249,6 +249,10 @@ function getTestConfigurations() {
 async function main() {
   // onnxruntimeWeb.env.logLevel = "verbose";
   // onnxruntimeWeb.env.debug = true;
+  
+  // Thread count management
+  let currentThreadCount = 8;
+  onnxruntimeWeb.env.wasm.numThreads = currentThreadCount;
 
   // Create model selection dropdown
   const modelSelectorLabel = document.createElement("label");
@@ -291,7 +295,37 @@ async function main() {
   const brAfterModel = document.createElement("br");
   document.body.appendChild(brAfterModel);
   
-  // Add another line break for spacing
+  // Create WASM Thread Count Input
+  const threadInputContainer = document.createElement("div");
+  threadInputContainer.style.marginTop = "10px";
+  threadInputContainer.style.marginBottom = "10px";
+  
+  const threadInputLabel = document.createElement("label");
+  threadInputLabel.textContent = "WASM Threads: ";
+  threadInputLabel.style.fontWeight = "bold";
+  threadInputLabel.style.marginRight = "10px";
+  threadInputContainer.appendChild(threadInputLabel);
+  
+  const threadInput = document.createElement("input");
+  threadInput.type = "number";
+  threadInput.id = "thread-input";
+  threadInput.value = currentThreadCount;
+  threadInput.min = "1";
+  threadInput.max = "16";
+  threadInput.style.width = "60px";
+  threadInput.style.marginRight = "10px";
+  threadInput.style.padding = "2px 5px";
+  threadInputContainer.appendChild(threadInput);
+  
+  const hardwareConcurrencyText = document.createElement("span");
+  hardwareConcurrencyText.textContent = `(Hardware concurrency: ${navigator.hardwareConcurrency || 'unknown'})`;
+  hardwareConcurrencyText.style.fontStyle = "italic";
+  hardwareConcurrencyText.style.color = "#666";
+  threadInputContainer.appendChild(hardwareConcurrencyText);
+  
+  document.body.appendChild(threadInputContainer);
+  
+  // Add line break for spacing
   const brSpacing = document.createElement("br");
   document.body.appendChild(brSpacing);
 
@@ -329,6 +363,26 @@ async function main() {
   modelSelector.addEventListener("change", (event) => {
     updateModelSettings(event.target.value);
   });
+
+  // Add input event listener for real-time updates and change event for validation
+  const handleThreadCountUpdate = (event) => {
+    const newThreadCount = parseInt(event.target.value);
+    
+    // Validate the input
+    if (newThreadCount >= 1 && newThreadCount <= 16) {
+      currentThreadCount = newThreadCount;
+      // Update ONNX Runtime WASM thread count
+      onnxruntimeWeb.env.wasm.numThreads = currentThreadCount;
+      console.log(`WASM thread count updated to: ${currentThreadCount}`);
+    } else if (event.type === "change") {
+      // Only reset on blur/change, not while typing
+      event.target.value = currentThreadCount;
+      console.warn(`Invalid thread count: ${newThreadCount}. Must be between 1 and 16.`);
+    }
+  };
+  
+  threadInput.addEventListener("input", handleThreadCountUpdate);
+  threadInput.addEventListener("change", handleThreadCountUpdate);
 
   // Add click event listener to "Run All Tests" button
   runAllButton.addEventListener("click", async () => {
